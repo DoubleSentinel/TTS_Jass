@@ -1,0 +1,6 @@
+# ignore everything except for targetted folders
+/*
+!/Jass
+!/Saved Objects
+!/assets
+!card_splitter.py
