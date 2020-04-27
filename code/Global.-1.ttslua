@@ -1,0 +1,257 @@
+-- ////////////////////////////// TOOL FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+function tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+local function reversedipairsiter(t, i)
+    i = i - 1
+    if i ~= 0 then
+        return i, t[i]
+    end
+end
+
+function reversedipairs(t)
+    return reversedipairsiter, t, #t + 1
+end
+
+--//////////////////////////////////// END \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+--[[ Lua code. See documentation: https://api.tabletopsimulator.com/ --]]
+--[[ The onLoad event is called after the game save finishes loading. --]]
+player_partners = {Orange="Purple", White="Green", Purple="Orange", Green="White"}
+play_zones = {Orange="b158cb", White="e35781", Purple="242345", Green="eab1a0"}
+color_names = {"Pique", "Coeur", "Trèfle", "Carreau"}
+terminal_game_points = 1000
+game_started = false
+cards = {}
+turn_cards = {}
+round_cards = {}
+
+function onPlayerConnect(player)
+
+    print("Player " .. player.steam_name .. " connected.")
+end
+
+function onPlayerChangeColor(new_player_color)
+   if new_player_color == "White" and current_player==nil then
+     UI.hide("welcome_screen")
+     UI.show("game_type_form")
+   end
+end
+
+function close_game_form()
+    UI.hide("game_type_form")
+end
+
+function points_selected(player, option, id)
+    -- updating terminal points only if the player changing the value is white
+    if player.color == "White" then
+      terminal_game_points = tonumber(option)
+    end
+end
+
+function all_players_seated()
+    for _,player_color in pairs(Player.getAvailableColors()) do
+      if Player[player_color].seated != true then
+        return false
+      end
+    end
+    return true
+end
+
+function calculate_turn_winner()
+    for player, card in pairs(turn_cards) do
+      suite = string.sub(cards[card.getGUID()],1,1)
+      num = string.sub(cards[card.getGUID()],2,2)
+      -- check which card has the highest value using card/trump_values
+    end
+end
+
+function end_turn()
+    if tablelength(turn_cards) == 4 then
+      -- gather the played cards
+      -- place them at center view
+      -- calculate who won the round
+      -- record which team won the round
+      -- move turn to color who won the round
+      calculate_turn_winner()
+      turn_cards = {}
+    end
+end
+
+function onObjectEnterScriptingZone(zone, obj)
+    if game_started then
+        -- only allow the snapping of the card (therefore playing the card) if
+        -- the zone belongs to the player holding the card and there are no
+        -- other cards in the zone
+        if zone.getGUID() == play_zones[obj.held_by_color] and #zone.getObjects()==0 then
+          position={x=zone.getPosition().x, y=1.03, z=zone.getPosition().z}
+          obj.setLock(true)
+          obj.setPosition(position)
+          turn_cards[Player[obj.held_by_color]] = obj
+          calculate_turn_winner()
+          end_turn()
+        end
+    end
+end
+
+function setup_game(player, value, id)
+    -- later, check that all players are seated using the all_players_seated()
+    if player.color == "White" then
+        --print(all_players_seated())
+        jass_deck.shuffle()
+        for _,player in pairs(Player.getAvailableColors()) do
+            jass_deck.deal(9, player)
+        end
+        close_game_form()
+        -- waiting 1s otherwise the cards don't have the time to get to the
+        -- player hands
+        Wait.time(detect_first_player, 1)
+        show_select_trump()
+    end
+end
+
+function select_trump(player, value, id)
+    -- use this when testing with 4 players
+    --if player.steam_name == current_player.steam_name then
+    --   print(id)
+    --end
+    if player.color == current_player.color then
+        if id == "pass" then
+          broadcastToAll(current_player.color.." a schibré à " .. player_partners[player.color],
+                        {r=1, g=1, b=1})
+          current_player = Player[player_partners[player.color]]
+        else
+          current_trump = id
+          current_player = player
+          UI.hide("trump_selector")
+          print(id)
+          broadcastToAll(current_player.color.." a choisit l'atout: " .. color_names[tonumber(id)+1],
+                        {r=1, g=1, b=1})
+          game_started = true
+        end
+    end
+end
+
+function show_select_trump()
+    UI.setXmlTable({
+      {
+          tag="HorizontalLayout",
+          attributes={
+              height=200,
+              width=500,
+              color="rgba(1,1,1,0.7)",
+              id="trump_selector"
+          },
+          children={
+              {
+                  tag="Button",
+                  attributes={
+                      text="♠",
+                      fontSize=100,
+                      color="black",
+                      textcolor="white",
+                      id="0",
+                      onClick="select_trump",
+                  },
+              },
+              {
+                  tag="Button",
+                  attributes={
+                      text="♥",
+                      fontSize=100,
+                      color="red",
+                      textcolor="white",
+                      id="1",
+                      onClick="select_trump",
+                  },
+              },
+              {
+                  tag="Button",
+                  attributes={
+                      text="♣",
+                      fontSize=100,
+                      color="black",
+                      textcolor="white",
+                      id="2",
+                      onClick="select_trump",
+                  },
+              },
+              {
+                  tag="Button",
+                  attributes={
+                      text="♦",
+                      fontSize=100,
+                      color="red",
+                      textcolor="white",
+                      id="3",
+                      onClick="select_trump",
+                  },
+              },
+              {
+                  tag="Button",
+                  attributes={
+                      text="↑",
+                      fontSize=100,
+                      color="white",
+                      textcolor="black",
+                      id="pass",
+                      onClick="select_trump",
+                  },
+              },
+          }
+      }
+    })
+end
+
+function detect_first_player()
+    for _,player_color in pairs(Player.getAvailableColors()) do
+      local hand = Player[player_color].getHandObjects(1)
+      for _,card in pairs(hand) do
+        -- first player to play is the owner of 7 of diamonds == card n°32
+        if cards[card.guid] == 32 then
+          -- using color for testing but should switch to Player[player].steam_name
+          broadcastToAll("Le premier à jouer est " .. player_color .. " car il/elle a le 7 de ♢",
+                        {r=1, g=1, b=1})
+          current_player=Player[player_color]
+          -- implement turn system when testing with 4 players
+          --Turns.enable = true
+          --Turns.pass_turns = false
+          --Turns.turn_color = player
+        end
+      end
+    end
+end
+
+function onLoad()
+    UI.hide("game_type_form")
+    jass_deck = getJassDeck()
+    local j = 0
+    -- iterating in reverse because the deck is facedown onLoad
+    for i,card in reversedipairs(jass_deck.getObjects()) do
+      -- hide tooltip with card.tooltip = false
+      if j % 10 == 9 then
+        j = j+2
+      else
+        j = j+1
+      end
+      cards[card.guid] = j
+    end
+end
+
+function getJassDeck()
+    for _,object in pairs(getAllObjects()) do
+      if object.tag == 'Deck' then
+          return object
+        end
+    end
+    return nil
+end
+
+--[[ The onUpdate event is called once per frame. --]]
+function onUpdate()
+    --[[ print('onUpdate loop!') --]]
+end

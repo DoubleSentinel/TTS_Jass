@@ -1,0 +1,34 @@
+<!-- Xml UI. See documentation: https://api.tabletopsimulator.com/ui/introUI/ -->
+<!--<Button onClick="uibutton" width="200" height="200">Example Button</Button>-->
+<!--<Panel id="welcome_screen" color="#FFFFFFCC" width="300" height="150">
+  <VerticalLayout>
+    <Text>Bienvenue au Jass entièrement scripté de TableTop Simulator.</Text>
+    <Text>Choisissez une place sur la table en changeant de couleur en cliquant sur votre
+    nom d'utilisateur en haut à droite. Le joueur Blanc sera maître de la salle, capable de configurer la partie.</Text>
+    <Text>Asseillez vous en face de votre coéquipier Blanc-Vert ou Orange-Violet</Text>
+  </VerticalLayout>
+</Panel>-->
+
+<Panel id="game_type_form" color="#FFFFFFCC" width="500" height="300">
+  <VerticalLayout childForceExpandHeight="true" spacing="20" padding="5">
+    <HorizontalLayout>
+      <Text alignment="MiddleLeft">Paramètres de la partie</Text>
+      <Button onClick="close_game_form">
+        X
+      </Button>
+    </HorizontalLayout>
+    <Panel>
+      <HorizontalLayout>
+        <Text>Nombre de points requis pour gagner:</Text>
+        <Dropdown id="max_points" onValueChanged="points_selected">
+          <Option id="option_500">500</Option>
+          <Option id="option_1000" selected="true">1000</Option>
+          <Option id="option_2500">2500</Option>
+        </Dropdown>
+      </HorizontalLayout>
+    </Panel>
+    <Button onClick="setup_game">
+      Lancer la partie
+    </Button>
+  </VerticalLayout>
+</Panel>
