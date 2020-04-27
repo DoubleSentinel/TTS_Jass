@@ -5,14 +5,12 @@ function tablelength(T)
   for _ in pairs(T) do count = count + 1 end
   return count
 end
-
 local function reversedipairsiter(t, i)
     i = i - 1
     if i ~= 0 then
         return i, t[i]
     end
 end
-
 function reversedipairs(t)
     return reversedipairsiter, t, #t + 1
 end
@@ -230,8 +228,7 @@ function onLoad()
     UI.hide("game_type_form")
     jass_deck = getJassDeck()
     local j = 0
-    -- iterating in reverse because the deck is facedown onLoad
-    for i,card in reversedipairs(jass_deck.getObjects()) do
+    for i,card in ipairs(jass_deck.getObjects()) do
       -- hide tooltip with card.tooltip = false
       if j % 10 == 9 then
         j = j+2
@@ -239,6 +236,9 @@ function onLoad()
         j = j+1
       end
       cards[card.guid] = j
+    end
+    for guid, val in pairs(cards) do
+      print(guid..": "..val)
     end
 end
 
